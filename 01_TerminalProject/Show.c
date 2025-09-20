@@ -22,10 +22,11 @@ int main(int argc, char **argv) {
     int buffer_size = file_size + 1;
     char* buffer = calloc(buffer_size, sizeof(char));
     int read_bytes = fread(buffer, sizeof(char), file_size, file);
-    if (read_bytes != file_size) {
+    if (read_bytes != file_size && ferror(file)) {
         printf("Failed to read file content\n");
         return -1;
     }
+    buffer[read_bytes] = '\0';
 
     fclose(file);
 
@@ -69,10 +70,15 @@ int main(int argc, char **argv) {
     keypad(text_display, true);
 
     bool is_running = true;
+    int c = 0;
     int current_line = 0;
     int current_column = 0;
     while (is_running) {
         werase(text_display);
+        
+        mvwhline(frame, LINES-1, 1, 0, COLS-2);
+        mvwprintw(frame, LINES-1, 1, "l %d, c %d, %s", current_line, current_column, keyname(c));
+        wrefresh(frame);
 
         for (int i = 0; i < text_display_height; ++i) {
             if (current_line + i >= lines_size) {
@@ -81,11 +87,10 @@ int main(int argc, char **argv) {
             if (current_column >= lines_lens[current_line + i]) {
                 continue;
             }
-            if (current_column < lines_lens[current_line + i])
-                mvwaddnstr(text_display, i, 0, lines[current_line + i] + current_column, text_display_width);
+            mvwaddnstr(text_display, i, 0, lines[current_line + i] + current_column, text_display_width);
         }
 
-        int c = wgetch(text_display);
+        c = wgetch(text_display);
         switch (c) {
             case 'q':
                 is_running = false;
@@ -109,7 +114,7 @@ int main(int argc, char **argv) {
                 }
                 break;
             case KEY_NPAGE:
-                if (current_line + 2 * text_display_height < lines_size) {
+                if (current_line + 1 * text_display_height < lines_size) {
                     current_line += text_display_height;
                 } else {
                     current_line = lines_size - text_display_height;
@@ -123,10 +128,6 @@ int main(int argc, char **argv) {
                 }
                 break;
         }
-        mvwhline(frame, LINES-1, 1, 0, COLS-2);
-        // mvwaddstr(frame, LINES-1, 1, keyname(c));
-        mvwprintw(frame, LINES-1, 1, "%s, l %d, c %d", keyname(c), current_line, current_column);
-        wrefresh(frame);
     }
 
     free(lines);
